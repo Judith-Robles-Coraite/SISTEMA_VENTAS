@@ -1,0 +1,94 @@
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Rol {
+  id       Int       @id @default(autoincrement())
+  nombre   String    @unique
+  usuarios Usuario[]
+}
+
+model Usuario {
+  id       Int    @id @default(autoincrement())
+  nombre   String
+  password String
+  rol_id   Int
+
+  rol           Rol       @relation(fields: [rol_id], references: [id])
+  cajeroPedidos Pedido[]  @relation("CajeroRelation")
+  meseroPedidos Pedido[]  @relation("MeseraRelation")
+  ingresos      Ingreso[]
+}
+
+model Mesa {
+  id      Int      @id @default(autoincrement())
+  numero  Int      @unique
+  estado  String   @default("LIBRE") // "LIBRE" o "OCUPADA"
+  pedidos Pedido[]
+}
+
+model CategoriaProducto {
+  id        Int        @id @default(autoincrement())
+  nombre    String     @unique
+  productos Producto[]
+}
+
+model Producto {
+  id             Int      @id @default(autoincrement())
+  nombre         String
+  precio         Decimal 
+  imagen_url     String?
+  categoria_id   Int
+  maneja_stock   Boolean  @default(false) // true = requiere control de stock
+  stock          Int      @default(0)
+  fecha_creacion DateTime @default(now())
+
+  categoria      CategoriaProducto @relation(fields: [categoria_id], references: [id])
+  detallesPedido DetallePedido[]
+  ingresos       Ingreso[]
+}
+
+model Pedido {
+  id              Int       @id @default(autoincrement())
+  pedido_padre_id Int?
+  mesa_id         Int?
+  mesera_id       Int
+  cajero_id       Int
+  estado          String? // "EN_ATENCION" o "CONCLUIDO"
+  fecha_creacion  DateTime  @default(now())
+  fecha_concluido DateTime?
+  total           Decimal?  @default(0)
+
+  pedido_padre  Pedido?         @relation("PedidoPadreRelation", fields: [pedido_padre_id], references: [id])
+  pedidos_hijos Pedido[]        @relation("PedidoPadreRelation")
+  mesa          Mesa?           @relation(fields: [mesa_id], references: [id])
+  mesera        Usuario         @relation("MeseraRelation", fields: [mesera_id], references: [id])
+  cajero        Usuario         @relation("CajeroRelation", fields: [cajero_id], references: [id])
+  detalles      DetallePedido[]
+}
+
+model DetallePedido {
+  id              Int      @id @default(autoincrement())
+  pedido_id       Int
+  pedido          Pedido   @relation(fields: [pedido_id], references: [id])
+  producto_id     Int
+  producto        Producto @relation(fields: [producto_id], references: [id])
+  cantidad        Int
+  precio_unitario Decimal
+}
+
+model Ingreso {
+  id            Int      @id @default(autoincrement())
+  producto_id   Int
+  cantidad      Int
+  fecha_ingreso DateTime @default(now())
+  usuario_id    Int
+
+  producto Producto @relation(fields: [producto_id], references: [id])
+  usuario  Usuario  @relation(fields: [usuario_id], references: [id])
+}
